@@ -4,6 +4,7 @@ Radio ao vivo para procissoes e caminhadas com:
 
 - coordenador como gerenciador do evento;
 - nome da procissao/caminhada, local de saida e destino;
+- paroquia/grupo responsavel, cidade, data, horario e observacoes;
 - link privado do coordenador;
 - link para transmissores se identificarem e aguardarem autorizacao;
 - link publico de ouvintes, sem login;
@@ -209,6 +210,7 @@ Tambem e possivel, mas exige VPS, dominio, HTTPS, TURN e firewall. Segundo a doc
 ## Fluxo de uso
 
 1. O coordenador cria o evento.
+   - Informa nome, tipo, paroquia/grupo, cidade, data, horario, saida, destino e dados do coordenador.
 2. O sistema gera tres links: coordenador, transmissores e ouvintes.
 3. O transmissor abre o link, informa nome e funcao.
 4. O coordenador aprova ou recusa.

@@ -72,9 +72,16 @@ function publicEvent(event) {
     id: event.id,
     name: event.name,
     type: event.type,
+    organizerName: event.organizerName,
+    city: event.city,
+    state: event.state,
+    eventDate: event.eventDate,
+    eventTime: event.eventTime,
     startLocation: event.startLocation,
     destination: event.destination,
     coordinatorName: event.coordinatorName,
+    coordinatorPhone: event.coordinatorPhone,
+    notes: event.notes,
     roomName: event.roomName,
     live: event.live,
     createdAt: event.createdAt
@@ -216,13 +223,20 @@ app.post('/api/events', async (req, res, next) => {
   try {
   const name = String(req.body.name || '').trim();
   const type = String(req.body.type || 'procissao').trim();
+  const organizerName = String(req.body.organizerName || '').trim();
+  const city = String(req.body.city || '').trim();
+  const state = String(req.body.state || '').trim();
+  const eventDate = String(req.body.eventDate || '').trim();
+  const eventTime = String(req.body.eventTime || '').trim();
   const startLocation = String(req.body.startLocation || '').trim();
   const destination = String(req.body.destination || '').trim();
   const coordinatorName = String(req.body.coordinatorName || '').trim();
+  const coordinatorPhone = String(req.body.coordinatorPhone || '').trim();
+  const notes = String(req.body.notes || '').trim();
 
-  if (!name || !startLocation || !destination || !coordinatorName) {
+  if (!name || !organizerName || !city || !eventDate || !eventTime || !startLocation || !destination || !coordinatorName) {
     return res.status(400).json({
-      error: 'Informe nome, local de saida, destino e nome do coordenador.'
+      error: 'Informe nome do evento, paroquia/grupo, cidade, data, horario, saida, destino e coordenador.'
     });
   }
 
@@ -231,9 +245,16 @@ app.post('/api/events', async (req, res, next) => {
     id,
     name,
     type,
+    organizerName,
+    city,
+    state,
+    eventDate,
+    eventTime,
     startLocation,
     destination,
     coordinatorName,
+    coordinatorPhone,
+    notes,
     roomName: `vox-${id}`,
     live: true,
     createdAt: new Date().toISOString(),

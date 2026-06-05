@@ -161,8 +161,16 @@ function renderHome() {
           <input id="coordinatorName" name="coordinatorName" autocomplete="name" required placeholder="Ex: Leandro Schneider">
         </div>
         <div class="field">
+          <label for="coordinatorPhone">Telefone do coordenador</label>
+          <input id="coordinatorPhone" name="coordinatorPhone" inputmode="tel" autocomplete="tel" placeholder="Ex: (11) 99999-9999">
+        </div>
+        <div class="field">
           <label for="name">Defina o nome</label>
           <input id="name" name="name" required placeholder="Ex: Procissao de Nossa Senhora Aparecida">
+        </div>
+        <div class="field">
+          <label for="organizerName">Paroquia / grupo responsavel</label>
+          <input id="organizerName" name="organizerName" required placeholder="Ex: Paroquia Sao Joao Evangelista">
         </div>
         <div class="field">
           <label for="type">Tipo</label>
@@ -173,12 +181,32 @@ function renderHome() {
           </select>
         </div>
         <div class="field">
+          <label for="city">Cidade</label>
+          <input id="city" name="city" required placeholder="Ex: Sao Paulo">
+        </div>
+        <div class="field">
+          <label for="state">Estado</label>
+          <input id="state" name="state" maxlength="2" placeholder="Ex: SP">
+        </div>
+        <div class="field">
+          <label for="eventDate">Data</label>
+          <input id="eventDate" name="eventDate" type="date" required>
+        </div>
+        <div class="field">
+          <label for="eventTime">Horario de inicio</label>
+          <input id="eventTime" name="eventTime" type="time" required>
+        </div>
+        <div class="field">
           <label for="startLocation">Local de saida</label>
           <input id="startLocation" name="startLocation" required placeholder="Ex: Igreja Matriz">
         </div>
         <div class="field">
           <label for="destination">Destino</label>
           <input id="destination" name="destination" required placeholder="Ex: Santuario Sao Jose">
+        </div>
+        <div class="field">
+          <label for="notes">Observacoes para equipe</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Ex: chegada prevista, trio eletrico, equipe de canto, pontos de parada"></textarea>
         </div>
         <button class="btn" type="submit">Criar procissao</button>
         <p class="muted">
@@ -228,6 +256,17 @@ function joinPresence(role, requestId) {
   });
 }
 
+function formatEventDate(event) {
+  if (!event.eventDate) return 'Nao informado';
+  const [year, month, day] = event.eventDate.split('-');
+  if (!year || !month || !day) return event.eventDate;
+  return `${day}/${month}/${year}${event.eventTime ? ' as ' + event.eventTime : ''}`;
+}
+
+function eventPlace(event) {
+  return [event.city, event.state].filter(Boolean).join(' - ') || 'Localidade nao informada';
+}
+
 function eventSummary() {
   const event = current.event;
   return `
@@ -236,10 +275,14 @@ function eventSummary() {
       <h2>${escapeHtml(event.name)}</h2>
       <div class="stats">
         <div class="stat"><strong>${escapeHtml(event.type)}</strong><span>Tipo</span></div>
+        <div class="stat"><strong>${escapeHtml(formatEventDate(event))}</strong><span>Data e horario</span></div>
+        <div class="stat"><strong>${escapeHtml(eventPlace(event))}</strong><span>Cidade</span></div>
+        <div class="stat"><strong>${escapeHtml(event.organizerName || 'Nao informado')}</strong><span>Responsavel</span></div>
         <div class="stat"><strong>Saida</strong><span>${escapeHtml(event.startLocation)}</span></div>
         <div class="stat"><strong>Destino</strong><span>${escapeHtml(event.destination)}</span></div>
       </div>
-      <p class="muted">Coordenador: ${escapeHtml(event.coordinatorName)}</p>
+      <p class="muted">Coordenador: ${escapeHtml(event.coordinatorName)}${event.coordinatorPhone ? ' · ' + escapeHtml(event.coordinatorPhone) : ''}</p>
+      ${event.notes ? `<p class="muted">Observacoes: ${escapeHtml(event.notes)}</p>` : ''}
     </div>
   `;
 }
@@ -459,7 +502,10 @@ function renderListener() {
       <div class="card stack" style="width:min(680px, 100%)">
         <span class="pill live">Ouvinte conectado</span>
         <h2>${escapeHtml(current.event.name)}</h2>
-        <p class="lead">${escapeHtml(current.event.startLocation)} ate ${escapeHtml(current.event.destination)}</p>
+        <p class="lead">
+          ${escapeHtml(current.event.startLocation)} ate ${escapeHtml(current.event.destination)}
+          <br>${escapeHtml(formatEventDate(current.event))} · ${escapeHtml(eventPlace(current.event))}
+        </p>
         <div class="big-count" id="listener-live-count">0</div>
         <p class="muted">ouvintes acompanhando agora</p>
         <div id="listener-meter" class="audio-meter paused">${meterBars()}</div>

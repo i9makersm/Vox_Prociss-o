@@ -30,7 +30,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -150,7 +151,8 @@ select {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
   border: 1px solid rgba(201, 168, 76, 0.28);
   border-radius: 10px;
@@ -162,8 +164,14 @@ select {
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   border-color: var(--gold-light);
+}
+
+.field textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 .actions {
