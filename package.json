@@ -1,0 +1,25 @@
+{
+  "name": "vox-procissao",
+  "version": "1.0.0",
+  "description": "Radio ao vivo para procissoes e caminhadas com coordenador, transmissores autorizados e ouvintes publicos.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "livekit": "./bin/livekit-server --dev",
+    "livekit:lan": "./bin/livekit-server --dev --bind 0.0.0.0"
+  },
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "livekit-client": "^2.19.1",
+    "livekit-server-sdk": "^2.9.4",
+    "pg": "^8.21.0",
+    "redis": "^6.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
