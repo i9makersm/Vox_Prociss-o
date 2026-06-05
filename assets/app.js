@@ -46,6 +46,10 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+function selected(value, expected) {
+  return value === expected ? 'selected' : '';
+}
+
 function toast(message) {
   const el = document.createElement('div');
   el.className = 'toast';
@@ -287,6 +291,67 @@ function eventSummary() {
   `;
 }
 
+function eventEditForm(event) {
+  return `
+    <form id="event-edit-form" class="card form">
+      <h3>Editar informacoes do evento</h3>
+      <div class="field">
+        <label for="edit-coordinatorName">Nome do coordenador</label>
+        <input id="edit-coordinatorName" name="coordinatorName" autocomplete="name" required value="${escapeHtml(event.coordinatorName || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-coordinatorPhone">Telefone do coordenador</label>
+        <input id="edit-coordinatorPhone" name="coordinatorPhone" inputmode="tel" autocomplete="tel" value="${escapeHtml(event.coordinatorPhone || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-name">Nome do evento</label>
+        <input id="edit-name" name="name" required value="${escapeHtml(event.name || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-organizerName">Paroquia / grupo responsavel</label>
+        <input id="edit-organizerName" name="organizerName" required value="${escapeHtml(event.organizerName || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-type">Tipo</label>
+        <select id="edit-type" name="type">
+          <option value="procissao" ${selected(event.type, 'procissao')}>Procissao</option>
+          <option value="caminhada" ${selected(event.type, 'caminhada')}>Caminhada</option>
+          <option value="outro" ${selected(event.type, 'outro')}>Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="edit-city">Cidade</label>
+        <input id="edit-city" name="city" required value="${escapeHtml(event.city || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-state">Estado</label>
+        <input id="edit-state" name="state" maxlength="2" value="${escapeHtml(event.state || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-eventDate">Data</label>
+        <input id="edit-eventDate" name="eventDate" type="date" required value="${escapeHtml(event.eventDate || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-eventTime">Horario de inicio</label>
+        <input id="edit-eventTime" name="eventTime" type="time" required value="${escapeHtml(event.eventTime || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-startLocation">Local de saida</label>
+        <input id="edit-startLocation" name="startLocation" required value="${escapeHtml(event.startLocation || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-destination">Destino</label>
+        <input id="edit-destination" name="destination" required value="${escapeHtml(event.destination || '')}">
+      </div>
+      <div class="field">
+        <label for="edit-notes">Observacoes para equipe</label>
+        <textarea id="edit-notes" name="notes" rows="3">${escapeHtml(event.notes || '')}</textarea>
+      </div>
+      <button class="btn" type="submit">Salvar alteracoes</button>
+    </form>
+  `;
+}
+
 function renderCoordinator() {
   joinPresence('coordinator');
   const links = current.event.links;
@@ -295,6 +360,7 @@ function renderCoordinator() {
     <section class="grid">
       <div class="stack">
         ${eventSummary()}
+        ${eventEditForm(current.event)}
         <div class="card">
           <h3>Links do evento</h3>
           ${copyLinkBox('Link do coordenador', linkFor('coordinator', links.coordinator))}
@@ -327,7 +393,29 @@ function renderCoordinator() {
 
   bindCopyButtons();
   bindCoordinatorActions();
+  bindEventEditForm();
   updateCoordinatorStatus();
+}
+
+function bindEventEditForm() {
+  document.querySelector('#event-edit-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+      const updated = await api(`/api/events/${current.event.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...Object.fromEntries(form.entries()),
+          adminToken: current.linkToken
+        })
+      });
+      current.event = updated;
+      renderCoordinator();
+      toast('Informacoes do evento atualizadas.');
+    } catch (error) {
+      toast(error.message);
+    }
+  });
 }
 
 function copyLinkBox(label, link) {
@@ -632,6 +720,22 @@ socket.on('event:status', status => {
 
   if (current.role === 'coordinator') updateCoordinatorStatus();
   if (current.role === 'listener') setText('#listener-live-count', status.listeners);
+});
+
+socket.on('event:updated', event => {
+  if (!current.event || event.id !== current.event.id) return;
+  current.event = {
+    ...current.event,
+    ...event
+  };
+
+  if (current.role === 'coordinator') renderCoordinator();
+  if (current.role === 'transmitter') {
+    if (current.request?.status === 'approved') renderTransmitterLive();
+    else if (current.request) renderTransmitterWaiting();
+    else renderTransmitterIdentify();
+  }
+  if (current.role === 'listener') renderListener();
 });
 
 socket.on('transmitter:requested', request => {

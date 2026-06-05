@@ -88,6 +88,30 @@ function publicEvent(event) {
   };
 }
 
+function eventInput(body) {
+  return {
+    name: String(body.name || '').trim(),
+    type: String(body.type || 'procissao').trim(),
+    organizerName: String(body.organizerName || '').trim(),
+    city: String(body.city || '').trim(),
+    state: String(body.state || '').trim().toUpperCase(),
+    eventDate: String(body.eventDate || '').trim(),
+    eventTime: String(body.eventTime || '').trim(),
+    startLocation: String(body.startLocation || '').trim(),
+    destination: String(body.destination || '').trim(),
+    coordinatorName: String(body.coordinatorName || '').trim(),
+    coordinatorPhone: String(body.coordinatorPhone || '').trim(),
+    notes: String(body.notes || '').trim()
+  };
+}
+
+function validateEventInput(input) {
+  if (!input.name || !input.organizerName || !input.city || !input.eventDate || !input.eventTime || !input.startLocation || !input.destination || !input.coordinatorName) {
+    return 'Informe nome do evento, paroquia/grupo, cidade, data, horario, saida, destino e coordenador.';
+  }
+  return '';
+}
+
 function coordinatorEvent(event) {
   return {
     ...publicEvent(event),
@@ -221,40 +245,14 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/events', async (req, res, next) => {
   try {
-  const name = String(req.body.name || '').trim();
-  const type = String(req.body.type || 'procissao').trim();
-  const organizerName = String(req.body.organizerName || '').trim();
-  const city = String(req.body.city || '').trim();
-  const state = String(req.body.state || '').trim();
-  const eventDate = String(req.body.eventDate || '').trim();
-  const eventTime = String(req.body.eventTime || '').trim();
-  const startLocation = String(req.body.startLocation || '').trim();
-  const destination = String(req.body.destination || '').trim();
-  const coordinatorName = String(req.body.coordinatorName || '').trim();
-  const coordinatorPhone = String(req.body.coordinatorPhone || '').trim();
-  const notes = String(req.body.notes || '').trim();
-
-  if (!name || !organizerName || !city || !eventDate || !eventTime || !startLocation || !destination || !coordinatorName) {
-    return res.status(400).json({
-      error: 'Informe nome do evento, paroquia/grupo, cidade, data, horario, saida, destino e coordenador.'
-    });
-  }
+  const input = eventInput(req.body);
+  const error = validateEventInput(input);
+  if (error) return res.status(400).json({ error });
 
   const id = token(10);
   const event = {
     id,
-    name,
-    type,
-    organizerName,
-    city,
-    state,
-    eventDate,
-    eventTime,
-    startLocation,
-    destination,
-    coordinatorName,
-    coordinatorPhone,
-    notes,
+    ...input,
     roomName: `vox-${id}`,
     live: true,
     createdAt: new Date().toISOString(),
@@ -270,6 +268,28 @@ app.post('/api/events', async (req, res, next) => {
   ensurePresence(id);
   await saveEvent(event);
   res.status(201).json(coordinatorEvent(event));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/events/:eventId', async (req, res, next) => {
+  try {
+    const event = events.get(req.params.eventId);
+    if (!event || req.body.adminToken !== event.links.coordinator) {
+      return res.status(403).json({ error: 'Acesso do coordenador invalido.' });
+    }
+
+    const input = eventInput(req.body);
+    const error = validateEventInput(input);
+    if (error) return res.status(400).json({ error });
+
+    Object.assign(event, input, { updatedAt: new Date().toISOString() });
+    await saveEvent(event);
+
+    io.to(`event:${event.id}`).emit('event:updated', publicEvent(event));
+    await emitStatus(event.id);
+    res.json(coordinatorEvent(event));
   } catch (error) {
     next(error);
   }
