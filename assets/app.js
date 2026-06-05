@@ -162,11 +162,11 @@ function renderHome() {
         ${livekitNotice}
         <div class="field">
           <label for="coordinatorName">Nome do coordenador</label>
-          <input id="coordinatorName" name="coordinatorName" autocomplete="name" required placeholder="Ex: Leandro Schneider">
+          <input id="coordinatorName" name="coordinatorName" autocomplete="name" required placeholder="Ex: Coordenador da procissao">
         </div>
         <div class="field">
           <label for="coordinatorPhone">Telefone do coordenador</label>
-          <input id="coordinatorPhone" name="coordinatorPhone" inputmode="tel" autocomplete="tel" placeholder="Ex: (11) 99999-9999">
+          <input id="coordinatorPhone" name="coordinatorPhone" inputmode="tel" autocomplete="tel" placeholder="Ex: telefone de contato">
         </div>
         <div class="field">
           <label for="name">Defina o nome</label>
