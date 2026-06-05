@@ -8,9 +8,17 @@ const app = document.querySelector('#app');
 const audioOutput = document.querySelector('#audio-output');
 const toastRoot = document.querySelector('#toast-root');
 const socket = window.io();
+const remoteAudio = document.createElement('audio');
+remoteAudio.id = 'remote-audio';
+remoteAudio.autoplay = true;
+remoteAudio.playsInline = true;
+remoteAudio.controls = false;
+audioOutput.appendChild(remoteAudio);
+
 let appConfig = {
   publicAppUrl: ''
 };
+let wakeLock = null;
 
 let current = {
   role: null,
@@ -45,6 +53,51 @@ function toast(message) {
   toastRoot.appendChild(el);
   setTimeout(() => el.remove(), 3600);
 }
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return false;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+    });
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  await wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
+
+function setupMediaSession(event, mode) {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: event.name,
+    artist: mode === 'transmitter' ? 'Vox Procissao - Transmissor' : 'Vox Procissao - Ao Vivo',
+    album: `${event.startLocation} ate ${event.destination}`
+  });
+  navigator.mediaSession.playbackState = 'playing';
+  ['play', 'pause', 'stop'].forEach(action => {
+    try {
+      navigator.mediaSession.setActionHandler(action, async () => {
+        if (action === 'play') await remoteAudio.play().catch(() => {});
+        if (action === 'pause') remoteAudio.pause();
+        if (action === 'stop' && current.room) await current.room.disconnect();
+      });
+    } catch (_error) {}
+  });
+}
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && current.room && current.role === 'listener') {
+    await requestWakeLock();
+    await remoteAudio.play().catch(() => {});
+  }
+});
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -412,6 +465,9 @@ function renderListener() {
         <div id="listener-meter" class="audio-meter paused">${meterBars()}</div>
         <button class="btn" id="start-listening">Entrar no audio ao vivo</button>
         <p id="listener-state" class="muted">A pagina ja contou sua presenca. Toque no botao para liberar audio no navegador.</p>
+        <div class="notice">
+          Durante o teste, mantenha esta tela aberta. O app tenta manter a tela acordada enquanto voce ouve para evitar que o navegador interrompa o audio.
+        </div>
       </div>
     </section>
   `);
@@ -448,24 +504,26 @@ async function connectLiveKit(mode) {
 
     room.on(RoomEvent.TrackSubscribed, track => {
       if (track.kind !== Track.Kind.Audio) return;
-      const element = track.attach();
-      element.autoplay = true;
-      audioOutput.appendChild(element);
+      track.attach(remoteAudio);
+      remoteAudio.play().catch(() => {});
       animateAudio(true);
     });
 
     room.on(RoomEvent.TrackUnsubscribed, track => {
-      track.detach().forEach(element => element.remove());
+      track.detach(remoteAudio);
     });
 
     room.on(RoomEvent.Disconnected, () => {
       animateAudio(false);
       current.room = null;
+      releaseWakeLock();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
     });
 
     await room.connect(credentials.livekitUrl, credentials.token);
     await room.startAudio();
     current.room = room;
+    setupMediaSession(current.event, mode);
 
     if (mode === 'transmitter') {
       document.querySelector('#toggle-mic').disabled = false;
@@ -474,6 +532,8 @@ async function connectLiveKit(mode) {
     }
 
     if (mode === 'listener') {
+      await requestWakeLock();
+      await remoteAudio.play().catch(() => {});
       setText('#listener-state', 'Ouvindo ao vivo.');
       document.querySelector('#start-listening').disabled = true;
       toast('Audio conectado.');
